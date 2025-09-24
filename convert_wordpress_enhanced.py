@@ -314,9 +314,8 @@ def html_to_markdown_with_images(content):
     # Convert paragraphs
     content = re.sub(r'<p[^>]*>(.*?)</p>', r'\1\n\n', content, flags=re.DOTALL)
     
-    # Convert lists
-    content = re.sub(r'<ul[^>]*>(.*?)</ul>', lambda m: convert_ul(m.group(1)), content, flags=re.DOTALL)
-    content = re.sub(r'<ol[^>]*>(.*?)</ol>', lambda m: convert_ol(m.group(1)), content, flags=re.DOTALL)
+    # Convert lists (handle nested lists properly while preserving formatting)
+    content = convert_nested_lists(content)
     
     # Convert emphasis
     content = re.sub(r'<strong[^>]*>(.*?)</strong>', r'**\1**', content, flags=re.DOTALL)
@@ -338,15 +337,268 @@ def html_to_markdown_with_images(content):
     
     return content
 
-def convert_ul(ul_content):
-    items = re.findall(r'<li[^>]*>(.*?)</li>', ul_content, flags=re.DOTALL)
-    markdown_items = [f"- {item.strip()}" for item in items]
-    return '\n'.join(markdown_items) + '\n\n'
+def convert_nested_lists(content):
+    """Convert all lists (ul/ol) while properly handling nesting"""
+    def find_matching_tag(content, start_pos, tag_type):
+        """Find the matching closing tag for a list, accounting for nesting"""
+        if tag_type == 'ul':
+            open_tag = '<ul'
+            close_tag = '</ul>'
+        else:
+            open_tag = '<ol'
+            close_tag = '</ol>'
+        
+        tag_count = 1
+        pos = start_pos
+        
+        while pos < len(content) and tag_count > 0:
+            next_open = content.find(open_tag, pos)
+            next_close = content.find(close_tag, pos)
+            
+            if next_close == -1:
+                return -1  # No matching closing tag found
+            
+            if next_open != -1 and next_open < next_close:
+                # Found another opening tag before the closing tag
+                tag_count += 1
+                pos = next_open + len(open_tag)
+            else:
+                # Found a closing tag
+                tag_count -= 1
+                if tag_count == 0:
+                    return next_close + len(close_tag)
+                else:
+                    pos = next_close + len(close_tag)
+        
+        return -1
+    
+    # Process all ul and ol tags from outermost to innermost
+    pos = 0
+    while pos < len(content):
+        ul_pos = content.find('<ul', pos)
+        ol_pos = content.find('<ol', pos)
+        
+        # Find which comes first
+        if ul_pos == -1 and ol_pos == -1:
+            break
+        elif ul_pos == -1:
+            next_pos = ol_pos
+            tag_type = 'ol'
+        elif ol_pos == -1:
+            next_pos = ul_pos
+            tag_type = 'ul'
+        else:
+            if ul_pos < ol_pos:
+                next_pos = ul_pos
+                tag_type = 'ul'
+            else:
+                next_pos = ol_pos
+                tag_type = 'ol'
+        
+        # Find the end of the opening tag
+        tag_end = content.find('>', next_pos)
+        if tag_end == -1:
+            break
+        
+        # Find the matching closing tag
+        close_pos = find_matching_tag(content, tag_end + 1, tag_type)
+        if close_pos == -1:
+            pos = tag_end + 1
+            continue
+        
+        # Extract the list content (between opening and closing tags)
+        list_content = content[tag_end + 1:close_pos - (4 if tag_type == 'ul' else 5)]
+        
+        # Convert the list
+        if tag_type == 'ul':
+            markdown_list = convert_ul(list_content, 0)
+        else:
+            markdown_list = convert_ol(list_content, 0)
+        
+        # Replace the entire list with the markdown version
+        full_list = content[next_pos:close_pos]
+        content = content[:next_pos] + markdown_list + content[close_pos:]
+        
+        # Move position forward by the length of the replacement
+        pos = next_pos + len(markdown_list)
+    
+    return content
 
-def convert_ol(ol_content):
-    items = re.findall(r'<li[^>]*>(.*?)</li>', ol_content, flags=re.DOTALL)
-    markdown_items = [f"{i+1}. {item.strip()}" for i, item in enumerate(items)]
-    return '\n'.join(markdown_items) + '\n\n'
+def parse_li_items(content):
+    """Parse <li> items properly handling nested structure"""
+    items = []
+    pos = 0
+    
+    while pos < len(content):
+        # Find next <li> tag
+        li_start = content.find('<li', pos)
+        if li_start == -1:
+            break
+            
+        # Find the end of the opening <li> tag
+        tag_end = content.find('>', li_start)
+        if tag_end == -1:
+            break
+            
+        # Now find the matching </li> by counting nested <li> tags
+        li_count = 1
+        search_pos = tag_end + 1
+        li_content_start = tag_end + 1
+        
+        while search_pos < len(content) and li_count > 0:
+            next_li_open = content.find('<li', search_pos)
+            next_li_close = content.find('</li>', search_pos)
+            
+            if next_li_close == -1:
+                break
+                
+            # If there's an opening <li> before the closing </li>, count it
+            if next_li_open != -1 and next_li_open < next_li_close:
+                li_count += 1
+                search_pos = next_li_open + 3
+            else:
+                li_count -= 1
+                if li_count == 0:
+                    # Found the matching closing tag
+                    li_content = content[li_content_start:next_li_close]
+                    items.append(li_content)
+                    pos = next_li_close + 5  # Move past </li>
+                    break
+                else:
+                    search_pos = next_li_close + 5
+        
+        if li_count > 0:
+            # Couldn't find matching closing tag, take the rest
+            li_content = content[li_content_start:]
+            items.append(li_content)
+            break
+    
+    return items
+
+def convert_ul(ul_content, indent_level=0):
+    """Convert unordered list with support for nested lists"""
+    result_lines = []
+    indent = "  " * indent_level
+    
+    # Use proper parsing that handles nested li tags correctly
+    items = parse_li_items(ul_content)
+    
+    for item_content in items:
+        # Check if this item contains nested lists
+        if '<ul' in item_content or '<ol' in item_content:
+            # Split the content at the first nested list
+            nested_ul_match = re.search(r'(.*?)<ul[^>]*>(.*?)</ul>(.*)', item_content, flags=re.DOTALL)
+            nested_ol_match = re.search(r'(.*?)<ol[^>]*>(.*?)</ol>(.*)', item_content, flags=re.DOTALL)
+            
+            if nested_ul_match:
+                before, nested_content, after = nested_ul_match.groups()
+                main_text = convert_inline_formatting((before + after).strip())
+                
+                # Always add the main item, even if text is empty
+                result_lines.append(f"{indent}- {main_text}" if main_text else f"{indent}-")
+                
+                # Process nested list
+                nested_result = convert_ul(nested_content, indent_level + 1)
+                if nested_result.strip():
+                    for line in nested_result.strip().split('\n'):
+                        if line.strip():
+                            result_lines.append(f"  {line}")
+            
+            elif nested_ol_match:
+                before, nested_content, after = nested_ol_match.groups()
+                main_text = convert_inline_formatting((before + after).strip())
+                
+                # Always add the main item, even if text is empty  
+                result_lines.append(f"{indent}- {main_text}" if main_text else f"{indent}-")
+                
+                # Process nested list  
+                nested_result = convert_ol(nested_content, indent_level + 1)
+                if nested_result.strip():
+                    for line in nested_result.strip().split('\n'):
+                        if line.strip():
+                            result_lines.append(f"  {line}")
+        else:
+            # Regular item without nesting
+            clean_text = convert_inline_formatting(item_content.strip())
+            if clean_text:
+                result_lines.append(f"{indent}- {clean_text}")
+    
+    if indent_level == 0:
+        return '\n'.join(result_lines) + '\n\n'
+    else:
+        return '\n'.join(result_lines)
+
+def convert_ol(ol_content, indent_level=0):
+    """Convert ordered list with support for nested lists"""
+    result_lines = []
+    indent = "  " * indent_level
+    
+    # Use proper parsing that handles nested li tags correctly
+    items = parse_li_items(ol_content)
+    
+    for i, item_content in enumerate(items):
+        # Check if this item contains nested lists
+        if '<ul' in item_content or '<ol' in item_content:
+            # Split the content at the first nested list
+            nested_ul_match = re.search(r'(.*?)<ul[^>]*>(.*?)</ul>(.*)', item_content, flags=re.DOTALL)
+            nested_ol_match = re.search(r'(.*?)<ol[^>]*>(.*?)</ol>(.*)', item_content, flags=re.DOTALL)
+            
+            if nested_ul_match:
+                before, nested_content, after = nested_ul_match.groups()
+                main_text = convert_inline_formatting((before + after).strip())
+                
+                # Always add the main item, even if text is empty
+                result_lines.append(f"{indent}{i+1}. {main_text}" if main_text else f"{indent}{i+1}.")
+                
+                # Process nested list
+                nested_result = convert_ul(nested_content, indent_level + 1)
+                if nested_result.strip():
+                    for line in nested_result.strip().split('\n'):
+                        if line.strip():
+                            result_lines.append(f"  {line}")
+            
+            elif nested_ol_match:
+                before, nested_content, after = nested_ol_match.groups()
+                main_text = convert_inline_formatting((before + after).strip())
+                
+                # Always add the main item, even if text is empty
+                result_lines.append(f"{indent}{i+1}. {main_text}" if main_text else f"{indent}{i+1}.")
+                
+                # Process nested list
+                nested_result = convert_ol(nested_content, indent_level + 1)
+                if nested_result.strip():
+                    for line in nested_result.strip().split('\n'):
+                        if line.strip():
+                            result_lines.append(f"  {line}")
+        else:
+            # Regular item without nesting
+            clean_text = convert_inline_formatting(item_content.strip())
+            if clean_text:
+                result_lines.append(f"{indent}{i+1}. {clean_text}")
+    
+    if indent_level == 0:
+        return '\n'.join(result_lines) + '\n\n'
+    else:
+        return '\n'.join(result_lines)
+
+def convert_inline_formatting(text):
+    """Convert inline HTML formatting to markdown while preserving it"""
+    # Convert emphasis (preserve formatting)
+    text = re.sub(r'<strong[^>]*>(.*?)</strong>', r'**\1**', text, flags=re.DOTALL)
+    text = re.sub(r'<b[^>]*>(.*?)</b>', r'**\1**', text, flags=re.DOTALL)
+    text = re.sub(r'<em[^>]*>(.*?)</em>', r'*\1*', text, flags=re.DOTALL)
+    text = re.sub(r'<i[^>]*>(.*?)</i>', r'*\1*', text, flags=re.DOTALL)
+    
+    # Convert links
+    text = re.sub(r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', r'[\2](\1)', text, flags=re.DOTALL)
+    
+    # Convert line breaks
+    text = re.sub(r'<br\s*/?>', ' ', text)
+    
+    # Remove remaining simple HTML tags but preserve the content
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    return text.strip()
 
 def process_wordpress_xml_enhanced():
     """Enhanced WordPress XML processing with relationships and images"""
