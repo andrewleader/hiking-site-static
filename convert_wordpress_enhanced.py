@@ -51,6 +51,15 @@ def extract_relationships_and_images(item, namespaces):
                 destinations = unserialize_php(value)
                 relationships['destinations'] = destinations
             
+            # Trip report relationships - use correct field names from WordPress
+            elif key == 'destinations':  # Trip reports link to routes via 'destinations' field
+                destinations = unserialize_php(value)
+                relationships['destinations'] = destinations
+            elif key == 'trip_plan':   # Trip reports link to trip plans via 'trip_plan' field  
+                # trip_plan is just an ID, not serialized
+                if value.strip():
+                    relationships['trip_plan'] = value.strip()
+            
             # Featured images
             elif key == '_thumbnail_id':
                 relationships['featuredImageId'] = value
@@ -287,9 +296,10 @@ def process_wordpress_xml_enhanced():
     items = root.findall('.//item')
     print(f"Found {len(items)} items to process...")
     
-    # First pass: collect all areas and routes to create lookup
+    # First pass: collect all areas, routes, and trip plans to create lookup
     areas_lookup = {}  # id -> slug mapping
     routes_lookup = {}  # id -> slug mapping
+    plans_lookup = {}  # id -> slug mapping
     
     for item in items:
         post_type_elem = item.find('wp:post_type', namespaces)
@@ -297,7 +307,7 @@ def process_wordpress_xml_enhanced():
             continue
             
         post_type = post_type_elem.text
-        if post_type not in ['areas', 'routes']:
+        if post_type not in ['areas', 'routes', 'plans']:
             continue
             
         title_elem = item.find('title')
@@ -311,8 +321,10 @@ def process_wordpress_xml_enhanced():
                 areas_lookup[post_id] = slug
             elif post_type == 'routes':
                 routes_lookup[post_id] = slug
+            elif post_type == 'plans':
+                plans_lookup[post_id] = slug
     
-    print(f"Found {len(areas_lookup)} areas and {len(routes_lookup)} routes for relationship mapping")
+    print(f"Found {len(areas_lookup)} areas, {len(routes_lookup)} routes, and {len(plans_lookup)} plans for relationship mapping")
     
     # Second pass: process all content
     areas = []
@@ -387,10 +399,23 @@ def process_wordpress_xml_enhanced():
             trip_plans.append(plan_data)
             
         elif post_type == 'reports':
+            # Map route destinations
+            destination_slugs = []
+            for route_id in relationships.get('destinations', []):
+                if route_id in routes_lookup:
+                    destination_slugs.append(routes_lookup[route_id])
+            
+            # Map trip plan relationship
+            trip_plan_slug = ""
+            trip_plan_id = relationships.get('trip_plan')
+            if trip_plan_id and trip_plan_id in plans_lookup:
+                trip_plan_slug = plans_lookup[trip_plan_id]
+            
             report_data = {
                 'title': title,
                 'featuredImage': "",
-                'destinations': [],  # Could be mapped if relationship exists
+                'destinations': destination_slugs,  # Now properly mapped to routes!
+                'tripPlan': trip_plan_slug,  # Now properly mapped to trip plan!
                 'content': content,
                 'filename': f"{clean_filename(title)}.mdx"
             }
@@ -432,6 +457,14 @@ def write_enhanced_mdx_file(content_obj, content_type, output_dir):
                 frontmatter.append(f'  - route: content/routes/{d}.mdx')
             
     elif content_type == 'trip-report':
+        # Add placeholder fields that TinaCMS expects
+        frontmatter.append('featuredImage: ""')
+        frontmatter.append('startDate: ""')
+        frontmatter.append('endDate: ""')
+        if content_obj.get('tripPlan'):
+            frontmatter.append(f'tripPlan: content/trip-plans/{content_obj["tripPlan"]}.mdx')
+        else:
+            frontmatter.append('tripPlan: ""')
         if content_obj.get('destinations'):
             frontmatter.append('destinations:')
             for d in content_obj['destinations']:
