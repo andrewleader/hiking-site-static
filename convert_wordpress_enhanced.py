@@ -366,6 +366,7 @@ def process_wordpress_xml_enhanced():
     areas_lookup = {}  # id -> slug mapping
     routes_lookup = {}  # id -> slug mapping
     plans_lookup = {}  # id -> slug mapping
+    attachments_lookup = {}  # id -> URL mapping for images
     
     for item in items:
         post_type_elem = item.find('wp:post_type', namespaces)
@@ -373,24 +374,31 @@ def process_wordpress_xml_enhanced():
             continue
             
         post_type = post_type_elem.text
-        if post_type not in ['areas', 'routes', 'plans']:
+        if post_type not in ['areas', 'routes', 'plans', 'attachment']:
             continue
-            
+        
         title_elem = item.find('title')
         post_id_elem = item.find('wp:post_id', namespaces)
         
         if title_elem is not None and post_id_elem is not None:
             post_id = post_id_elem.text
-            slug = clean_filename(title_elem.text)
             
-            if post_type == 'areas':
-                areas_lookup[post_id] = slug
-            elif post_type == 'routes':
-                routes_lookup[post_id] = slug
-            elif post_type == 'plans':
-                plans_lookup[post_id] = slug
+            if post_type == 'attachment':
+                # Extract attachment URL for images
+                attachment_url_elem = item.find('wp:attachment_url', namespaces)
+                if attachment_url_elem is not None:
+                    attachments_lookup[post_id] = attachment_url_elem.text
+            else:
+                slug = clean_filename(title_elem.text)
+                
+                if post_type == 'areas':
+                    areas_lookup[post_id] = slug
+                elif post_type == 'routes':
+                    routes_lookup[post_id] = slug
+                elif post_type == 'plans':
+                    plans_lookup[post_id] = slug
     
-    print(f"Found {len(areas_lookup)} areas, {len(routes_lookup)} routes, and {len(plans_lookup)} plans for relationship mapping")
+    print(f"Found {len(areas_lookup)} areas, {len(routes_lookup)} routes, {len(plans_lookup)} plans, and {len(attachments_lookup)} attachments for relationship mapping")
     
     # Second pass: process all content
     areas = []
@@ -420,11 +428,16 @@ def process_wordpress_xml_enhanced():
         post_date = post_date_elem.text if post_date_elem is not None else '2019-01-01 00:00:00'
         date_part = post_date.split()[0]
         
+        # Get featured image URL if available
+        featured_image_url = ""
+        if 'featuredImageId' in relationships and relationships['featuredImageId']:
+            featured_image_url = attachments_lookup.get(relationships['featuredImageId'], "")
+            
         # Create content object with relationships and custom fields
         if post_type == 'areas':
             area_data = {
                 'title': title,
-                'featuredImage': "",
+                'featuredImage': featured_image_url,
                 'summitCoords': custom_fields.get('summitCoords', ''),
                 'mountainForecastUrl': custom_fields.get('mountainForecastUrl', ''),
                 'content': content,
@@ -446,7 +459,7 @@ def process_wordpress_xml_enhanced():
                 
             route_data = {
                 'title': title,
-                'featuredImage': "",
+                'featuredImage': featured_image_url,
                 'miles': custom_fields.get('miles'),
                 'gain': custom_fields.get('gain'),
                 'highestElevation': custom_fields.get('highestElevation'),
@@ -472,7 +485,7 @@ def process_wordpress_xml_enhanced():
             
             plan_data = {
                 'title': title,
-                'featuredImage': "",
+                'featuredImage': featured_image_url,
                 'startDate': custom_fields.get('startDate', ''),
                 'endDate': custom_fields.get('endDate', ''),
                 'destinations': destination_slugs,  # Now properly mapped to routes!
@@ -496,7 +509,7 @@ def process_wordpress_xml_enhanced():
             
             report_data = {
                 'title': title,
-                'featuredImage': "",
+                'featuredImage': featured_image_url,
                 'startDate': custom_fields.get('startDate', ''),
                 'endDate': custom_fields.get('endDate', ''),
                 'destinations': destination_slugs,  # Now properly mapped to routes!
