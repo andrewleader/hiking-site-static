@@ -181,6 +181,35 @@ def html_to_markdown_with_images(content):
     # Convert links
     content = re.sub(r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', r'[\2](\1)', content, flags=re.DOTALL)
     
+    # Convert WordPress galleries (handle before general lists)
+    def convert_gallery(match):
+        gallery_content = match.group(0)
+        
+        # Find all gallery items with images and captions
+        gallery_items = []
+        
+        # First find all img tags with src - handle both self-closing and regular
+        img_pattern = r'<img[^>]*src="([^"]*)"[^>]*(?:/>|>)'
+        images = re.findall(img_pattern, gallery_content)
+        
+        # Then find all captions
+        caption_pattern = r'<figcaption[^>]*class="[^"]*blocks-gallery-item__caption[^"]*"[^>]*>(.*?)</figcaption>'
+        captions = re.findall(caption_pattern, gallery_content, flags=re.DOTALL)
+        
+        # Match images with captions (assuming they're in order)
+        for i, src in enumerate(images):
+            if i < len(captions):
+                caption = re.sub(r'<[^>]+>', '', captions[i]).strip()
+                gallery_items.append(f'![{caption}]({src})')
+            else:
+                gallery_items.append(f'![]({src})')
+        
+        # Return images without bullet points, separated by line breaks
+        return '\n'.join(gallery_items) + '\n\n'
+    
+    # Handle WordPress gallery blocks - match to </ul></figure> to avoid nested figure tag issues
+    content = re.sub(r'<figure[^>]*class="[^"]*wp-block-gallery[^"]*"[^>]*>.*?</ul></figure>', convert_gallery, content, flags=re.DOTALL)
+    
     # Convert images (preserve Azure blob URLs)
     content = re.sub(r'<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*/?>', r'![\2](\1)', content)
     content = re.sub(r'<img[^>]*src="([^"]*)"[^>]*/?>', r'![](\1)', content)
