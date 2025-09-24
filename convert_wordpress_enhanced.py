@@ -439,13 +439,18 @@ def process_wordpress_xml_enhanced():
             if parent_id and parent_id in areas_lookup:
                 parent_area_slug = areas_lookup[parent_id]
             
+            # Set classRating to "class5" if we have YDS ratings but no explicit class rating
+            class_rating = custom_fields.get('classRating', '')
+            if not class_rating and custom_fields.get('ydsRating'):
+                class_rating = 'class5'
+                
             route_data = {
                 'title': title,
                 'featuredImage': "",
                 'miles': custom_fields.get('miles'),
                 'gain': custom_fields.get('gain'),
                 'highestElevation': custom_fields.get('highestElevation'),
-                'classRating': custom_fields.get('classRating', ''),
+                'classRating': class_rating,
                 'ydsRating': custom_fields.get('ydsRating', ''),
                 'ydsSubRating': custom_fields.get('ydsSubRating', ''),
                 'pitches': custom_fields.get('pitches'),
@@ -538,6 +543,9 @@ def write_enhanced_mdx_file(content_obj, content_type, output_dir):
                 continue
             if key == 'parentArea' and value:
                 frontmatter.append(f'parentArea: content/areas/{value}.mdx')
+            elif key == 'classRating':
+                # Always include classRating for routes, even if empty
+                frontmatter.append(f'classRating: "{value}"')
             elif value is not None and value != '':
                 if isinstance(value, str):
                     frontmatter.append(f'{key}: "{value}"')
