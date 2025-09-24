@@ -414,16 +414,16 @@ def write_enhanced_mdx_file(content_obj, content_type, output_dir):
             
     elif content_type == 'route':
         if content_obj.get('parentArea'):
-            frontmatter.append(f'parentArea: "{content_obj["parentArea"]}"')
+            frontmatter.append(f'parentArea: content/areas/{content_obj["parentArea"]}.mdx')
             
     elif content_type == 'trip-plan':
         if content_obj.get('destinations'):
-            destinations_yaml = '[' + ', '.join([f'"{d}"' for d in content_obj['destinations']]) + ']'
+            destinations_yaml = '[' + ', '.join([f'content/areas/{d}.mdx' for d in content_obj['destinations']]) + ']'
             frontmatter.append(f'destinations: {destinations_yaml}')
             
     elif content_type == 'trip-report':
         if content_obj.get('destinations'):
-            destinations_yaml = '[' + ', '.join([f'"{d}"' for d in content_obj['destinations']]) + ']'
+            destinations_yaml = '[' + ', '.join([f'content/areas/{d}.mdx' for d in content_obj['destinations']]) + ']'
             frontmatter.append(f'destinations: {destinations_yaml}')
     
     frontmatter.append('---')
