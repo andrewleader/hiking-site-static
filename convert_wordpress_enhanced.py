@@ -27,12 +27,32 @@ def unserialize_php(data):
     except:
         return []
 
-def extract_relationships_and_images(item, namespaces):
-    """Extract relationship data and images from a WordPress item"""
+def extract_coordinates_from_php_array(php_array_str):
+    """Extract coordinates from PHP serialized array string"""
+    if not php_array_str:
+        return None
     
-    # Extract postmeta for relationships
+    # Simple regex to extract lat and lng from the serialized string
+    lat_match = re.search(r's:3:"lat";s:\d+:"([^"]+)"', php_array_str)
+    lng_match = re.search(r's:3:"lng";s:\d+:"([^"]+)"', php_array_str)
+    
+    if lat_match and lng_match:
+        try:
+            lat = float(lat_match.group(1))
+            lng = float(lng_match.group(1))
+            return f"{lat}, {lng}"
+        except ValueError:
+            return None
+    
+    return None
+
+def extract_relationships_and_images(item, namespaces):
+    """Extract relationship data, custom fields, and images from a WordPress item"""
+    
+    # Extract postmeta for relationships and custom fields
     postmetas = item.findall('wp:postmeta', namespaces)
     relationships = {}
+    custom_fields = {}
     
     for meta in postmetas:
         key_elem = meta.find('wp:meta_key', namespaces)
@@ -63,6 +83,52 @@ def extract_relationships_and_images(item, namespaces):
             # Featured images
             elif key == '_thumbnail_id':
                 relationships['featuredImageId'] = value
+            
+            # Custom fields for routes/areas/plans (from original script)
+            elif key == 'miles':
+                try:
+                    custom_fields['miles'] = float(value) if value and value.replace('.', '').replace('-', '').isdigit() else None
+                except:
+                    custom_fields['miles'] = None
+            elif key == 'elevation_gain':
+                try:
+                    custom_fields['gain'] = int(value) if value and value.replace('-', '').isdigit() else None
+                except:
+                    custom_fields['gain'] = None
+            elif key == 'highest_elevation':
+                try:
+                    custom_fields['highestElevation'] = int(value) if value and value.replace('-', '').isdigit() else None
+                except:
+                    custom_fields['highestElevation'] = None
+            elif key == 'class':
+                if value and value.strip():
+                    custom_fields['classRating'] = f"class{value.strip()}"
+            elif key == 'yds_rating':
+                custom_fields['ydsRating'] = value if value and value.strip() else None
+            elif key == 'yds_sub_rating':
+                custom_fields['ydsSubRating'] = value if value and value.strip() else None
+            elif key == 'pitches':
+                try:
+                    custom_fields['pitches'] = int(value) if value and value.replace('-', '').isdigit() else None
+                except:
+                    custom_fields['pitches'] = None
+            elif key == 'caltopo':
+                custom_fields['calTopoUrl'] = value if value and value.strip() else None
+            elif key == 'gpx':
+                custom_fields['gpxFile'] = value if value and value.strip() else None
+            elif key == 'mountain_forecast':
+                custom_fields['mountainForecastUrl'] = value if value and value.strip() else None
+            elif key == 'summit':
+                # Handle PHP serialized array for coordinates
+                coords = extract_coordinates_from_php_array(value)
+                if coords:
+                    custom_fields['summitCoords'] = coords
+            elif key == 'parent_area':
+                custom_fields['parentAreaId'] = value if value and value.strip() else None
+            elif key == 'start_date':
+                custom_fields['startDate'] = value if value and value.strip() else None
+            elif key == 'end_date':
+                custom_fields['endDate'] = value if value and value.strip() else None
     
     # Extract content and process images/betacreator
     content_elem = item.find('content:encoded', namespaces)
@@ -78,9 +144,9 @@ def extract_relationships_and_images(item, namespaces):
         # Convert other HTML to markdown while preserving images
         content = html_to_markdown_with_images(content)
         
-        return content, images, relationships
+        return content, images, relationships, custom_fields
     
-    return "", [], relationships
+    return "", [], relationships, custom_fields
 
 def convert_betacreator_blocks(content):
     """Convert WordPress betacreator blocks to custom TinaCMS markdown components"""
@@ -346,21 +412,21 @@ def process_wordpress_xml_enhanced():
         title = title_elem.text
         print(f"Processing: {title} (type: {post_type})")
         
-        # Extract enhanced content with relationships and images
-        content, images, relationships = extract_relationships_and_images(item, namespaces)
+        # Extract enhanced content with relationships, custom fields, and images
+        content, images, relationships, custom_fields = extract_relationships_and_images(item, namespaces)
         
         # Get post date
         post_date_elem = item.find('wp:post_date', namespaces)
         post_date = post_date_elem.text if post_date_elem is not None else '2019-01-01 00:00:00'
         date_part = post_date.split()[0]
         
-        # Create content object with relationships
+        # Create content object with relationships and custom fields
         if post_type == 'areas':
             area_data = {
                 'title': title,
                 'featuredImage': "",
-                'summitCoords': relationships.get('summitCoords', ''),
-                'mountainForecastUrl': relationships.get('mountainForecastUrl', ''),
+                'summitCoords': custom_fields.get('summitCoords', ''),
+                'mountainForecastUrl': custom_fields.get('mountainForecastUrl', ''),
                 'content': content,
                 'filename': f"{clean_filename(title)}.mdx"
             }
@@ -376,7 +442,17 @@ def process_wordpress_xml_enhanced():
             route_data = {
                 'title': title,
                 'featuredImage': "",
+                'miles': custom_fields.get('miles'),
+                'gain': custom_fields.get('gain'),
+                'highestElevation': custom_fields.get('highestElevation'),
+                'classRating': custom_fields.get('classRating', ''),
+                'ydsRating': custom_fields.get('ydsRating', ''),
+                'ydsSubRating': custom_fields.get('ydsSubRating', ''),
+                'pitches': custom_fields.get('pitches'),
                 'parentArea': parent_area_slug,  # Now properly mapped!
+                'calTopoUrl': custom_fields.get('calTopoUrl', ''),
+                'gpxFile': custom_fields.get('gpxFile', ''),
+                'mountainForecastUrl': custom_fields.get('mountainForecastUrl', ''),
                 'content': content,
                 'filename': f"{clean_filename(title)}.mdx"
             }
@@ -392,6 +468,8 @@ def process_wordpress_xml_enhanced():
             plan_data = {
                 'title': title,
                 'featuredImage': "",
+                'startDate': custom_fields.get('startDate', ''),
+                'endDate': custom_fields.get('endDate', ''),
                 'destinations': destination_slugs,  # Now properly mapped to routes!
                 'content': content,
                 'filename': f"{clean_filename(title)}.mdx"
@@ -414,6 +492,8 @@ def process_wordpress_xml_enhanced():
             report_data = {
                 'title': title,
                 'featuredImage': "",
+                'startDate': custom_fields.get('startDate', ''),
+                'endDate': custom_fields.get('endDate', ''),
                 'destinations': destination_slugs,  # Now properly mapped to routes!
                 'tripPlan': trip_plan_slug,  # Now properly mapped to trip plan!
                 'content': content,
@@ -431,7 +511,7 @@ def clean_filename(title):
     return filename.strip('-')
 
 def write_enhanced_mdx_file(content_obj, content_type, output_dir):
-    """Write MDX file with enhanced frontmatter"""
+    """Write MDX file with enhanced frontmatter including all custom fields"""
     
     os.makedirs(output_dir, exist_ok=True)
     file_path = output_dir / content_obj['filename']
@@ -441,30 +521,64 @@ def write_enhanced_mdx_file(content_obj, content_type, output_dir):
     frontmatter.append(f'title: "{content_obj["title"]}"')
     
     if content_type == 'area':
-        if content_obj.get('summitCoords'):
-            frontmatter.append(f'summitCoords: "{content_obj["summitCoords"]}"')
-        if content_obj.get('mountainForecastUrl'):
-            frontmatter.append(f'mountainForecastUrl: "{content_obj["mountainForecastUrl"]}"')
+        # Add all non-empty custom fields for areas
+        for key, value in content_obj.items():
+            if key in ['title', 'content', 'filename']:
+                continue
+            if value is not None and value != '':
+                if isinstance(value, str):
+                    frontmatter.append(f'{key}: "{value}"')
+                else:
+                    frontmatter.append(f'{key}: {value}')
             
     elif content_type == 'route':
-        if content_obj.get('parentArea'):
-            frontmatter.append(f'parentArea: content/areas/{content_obj["parentArea"]}.mdx')
+        # Add all route-specific fields, including custom fields from WordPress
+        for key, value in content_obj.items():
+            if key in ['title', 'content', 'filename']:
+                continue
+            if key == 'parentArea' and value:
+                frontmatter.append(f'parentArea: content/areas/{value}.mdx')
+            elif value is not None and value != '':
+                if isinstance(value, str):
+                    frontmatter.append(f'{key}: "{value}"')
+                else:
+                    frontmatter.append(f'{key}: {value}')
             
     elif content_type == 'trip-plan':
+        # Add all trip plan fields
+        for key, value in content_obj.items():
+            if key in ['title', 'content', 'filename', 'destinations']:
+                continue
+            if value is not None and value != '':
+                if isinstance(value, str):
+                    frontmatter.append(f'{key}: "{value}"')
+                else:
+                    frontmatter.append(f'{key}: {value}')
+        
+        # Handle destinations separately
         if content_obj.get('destinations'):
             frontmatter.append('destinations:')
             for d in content_obj['destinations']:
                 frontmatter.append(f'  - route: content/routes/{d}.mdx')
             
     elif content_type == 'trip-report':
-        # Add placeholder fields that TinaCMS expects
-        frontmatter.append('featuredImage: ""')
-        frontmatter.append('startDate: ""')
-        frontmatter.append('endDate: ""')
+        # Add all trip report fields
+        for key, value in content_obj.items():
+            if key in ['title', 'content', 'filename', 'destinations', 'tripPlan']:
+                continue
+            if value is not None and value != '':
+                if isinstance(value, str):
+                    frontmatter.append(f'{key}: "{value}"')
+                else:
+                    frontmatter.append(f'{key}: {value}')
+        
+        # Handle tripPlan
         if content_obj.get('tripPlan'):
             frontmatter.append(f'tripPlan: content/trip-plans/{content_obj["tripPlan"]}.mdx')
         else:
             frontmatter.append('tripPlan: ""')
+            
+        # Handle destinations
         if content_obj.get('destinations'):
             frontmatter.append('destinations:')
             for d in content_obj['destinations']:
