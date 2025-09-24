@@ -4,6 +4,7 @@ import { Inter as FontSans, Lato, Nunito } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { VideoDialogProvider } from "@/components/ui/VideoDialogContext";
 import VideoDialog from "@/components/ui/VideoDialog";
+import { ImageGalleryProvider } from "@/components/image-gallery-provider";
 
 import "@/styles.css";
 import { TailwindIndicator } from "@/components/ui/breakpoint-indicator";
@@ -37,10 +38,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn(fontSans.variable, nunito.variable, lato.variable)}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <VideoDialogProvider>
-          {children}
-          <VideoDialog />
-        </VideoDialogProvider>
+        <ImageGalleryProvider>
+          <VideoDialogProvider>
+            {children}
+            <VideoDialog />
+          </VideoDialogProvider>
+        </ImageGalleryProvider>
         <TailwindIndicator />
       </body>
     </html>

@@ -17,7 +17,7 @@ export const RouteOverlay: React.FC<RouteOverlayProps> = ({
   const [hideOverlay, setHideOverlay] = useState(false);
 
   return (
-    <div className="relative inline-block max-w-full">
+    <div className="relative inline-block max-w-full" data-route-overlay="true">
       {/* Base image */}
       <Image
         src={imageSrc}
