@@ -25,7 +25,7 @@ export const RouteOverlay: React.FC<RouteOverlayProps> = ({
         width={800}
         height={600}
         className="max-w-full h-auto"
-        style={{ objectFit: 'contain', marginTop: 0, marginBottom: 0 }}
+        style={{ objectFit: 'contain', marginTop: 0, marginBottom: 0, maxHeight: '600px' }}
       />
       
       {/* Overlay image */}
@@ -35,7 +35,7 @@ export const RouteOverlay: React.FC<RouteOverlayProps> = ({
           alt="Route overlay"
           fill
           className="max-w-full h-auto"
-          style={{ position: 'absolute', top: 0, left: 0, objectFit: 'contain', marginTop: 0, marginBottom: 0 , pointerEvents: 'none' }}
+          style={{ position: 'absolute', top: 0, left: 0, objectFit: 'contain', marginTop: 0, marginBottom: 0, maxHeight: '600px', pointerEvents: 'none' }}
         />
       )}
       
