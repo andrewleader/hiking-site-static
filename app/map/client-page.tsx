@@ -431,68 +431,127 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                 onCloseClick={() => setSelectedLocation(null)}
               >
                 <div className="max-w-sm">
-                  <h3 className="font-bold text-lg mb-2">{selectedLocation.title}</h3>
-                  <div className="mb-3">
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      selectedLocation.type === 'area' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {selectedLocation.type}
-                    </span>
-                    {selectedLocation.type === 'area' && selectedLocation.routeCount !== undefined && (
-                      <span className="ml-2 text-sm text-gray-600">
-                        {selectedLocation.routeCount} route{selectedLocation.routeCount !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {selectedLocation.routes && selectedLocation.routes.length > 0 && (
-                      <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                        {selectedLocation.type === 'route' 
-                          ? selectedLocation.routes[0].classRating?.replace('class', 'Class ') || 'Unspecified'
-                          : `Max: ${getHighestDifficulty(selectedLocation.routes).replace('class', 'Class ') || 'Unspecified'}`
-                        }
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Route-specific details */}
-                  {selectedLocation.type === 'route' && selectedLocation.routes && selectedLocation.routes[0] && (
-                    <div className="mb-3 text-sm text-gray-600">
-                      {selectedLocation.routes[0].miles && (
-                        <div>📏 {selectedLocation.routes[0].miles} miles</div>
+                  {/* Show route info directly if it's an area with exactly 1 route */}
+                  {selectedLocation.type === 'area' && selectedLocation.routes && selectedLocation.routes.length === 1 ? (
+                    <>
+                      <h3 className="font-bold text-lg mb-2">{selectedLocation.routes[0].title}</h3>
+                      <div className="mb-3">
+                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                          route
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          in {selectedLocation.title}
+                        </span>
+                        {selectedLocation.routes[0].classRating && (
+                          <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            {selectedLocation.routes[0].classRating.replace('class', 'Class ')}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Route details */}
+                      <div className="mb-3 text-sm text-gray-600">
+                        {selectedLocation.routes[0].miles && (
+                          <div>📏 {selectedLocation.routes[0].miles} miles</div>
+                        )}
+                        {selectedLocation.routes[0].gain && (
+                          <div>⬆️ {selectedLocation.routes[0].gain}ft gain</div>
+                        )}
+                        {selectedLocation.routes[0].highestElevation && (
+                          <div>🏔️ {selectedLocation.routes[0].highestElevation}ft elevation</div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-600">
+                          📍 {selectedLocation.coordinates.lat.toFixed(4)}, {selectedLocation.coordinates.lng.toFixed(4)}
+                        </p>
+                        {selectedLocation.routes[0]._sys?.filename && (
+                          <a 
+                            href={`/routes/${selectedLocation.routes[0]._sys.filename.replace('.mdx', '')}`}
+                            className="text-purple-600 hover:text-purple-800 text-sm font-medium block"
+                            target="_blank"
+                          >
+                            View Route Details →
+                          </a>
+                        )}
+                        {selectedLocation.area?._sys?.filename && (
+                          <a 
+                            href={`/areas/${selectedLocation.area._sys.filename.replace('.mdx', '')}`}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium block"
+                            target="_blank"
+                          >
+                            View Area Details →
+                          </a>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-bold text-lg mb-2">{selectedLocation.title}</h3>
+                      <div className="mb-3">
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          selectedLocation.type === 'area' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {selectedLocation.type}
+                        </span>
+                        {selectedLocation.type === 'area' && selectedLocation.routeCount !== undefined && (
+                          <span className="ml-2 text-sm text-gray-600">
+                            {selectedLocation.routeCount} route{selectedLocation.routeCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {selectedLocation.routes && selectedLocation.routes.length > 0 && (
+                          <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            {selectedLocation.type === 'route' 
+                              ? selectedLocation.routes[0].classRating?.replace('class', 'Class ') || 'Unspecified'
+                              : `Max: ${getHighestDifficulty(selectedLocation.routes).replace('class', 'Class ') || 'Unspecified'}`
+                            }
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Route-specific details for single routes */}
+                      {selectedLocation.type === 'route' && selectedLocation.routes && selectedLocation.routes[0] && (
+                        <div className="mb-3 text-sm text-gray-600">
+                          {selectedLocation.routes[0].miles && (
+                            <div>📏 {selectedLocation.routes[0].miles} miles</div>
+                          )}
+                          {selectedLocation.routes[0].gain && (
+                            <div>⬆️ {selectedLocation.routes[0].gain}ft gain</div>
+                          )}
+                          {selectedLocation.routes[0].highestElevation && (
+                            <div>🏔️ {selectedLocation.routes[0].highestElevation}ft elevation</div>
+                          )}
+                        </div>
                       )}
-                      {selectedLocation.routes[0].gain && (
-                        <div>⬆️ {selectedLocation.routes[0].gain}ft gain</div>
-                      )}
-                      {selectedLocation.routes[0].highestElevation && (
-                        <div>🏔️ {selectedLocation.routes[0].highestElevation}ft elevation</div>
-                      )}
-                    </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-600">
+                          📍 {selectedLocation.coordinates.lat.toFixed(4)}, {selectedLocation.coordinates.lng.toFixed(4)}
+                        </p>
+                        {selectedLocation.area?._sys?.filename && (
+                          <a 
+                            href={`/areas/${selectedLocation.area._sys.filename.replace('.mdx', '')}`}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium block"
+                            target="_blank"
+                          >
+                            View Area Details →
+                          </a>
+                        )}
+                        {selectedLocation.type === 'route' && selectedLocation.routes && selectedLocation.routes[0]?._sys?.filename && (
+                          <a 
+                            href={`/routes/${selectedLocation.routes[0]._sys.filename.replace('.mdx', '')}`}
+                            className="text-purple-600 hover:text-purple-800 text-sm font-medium block"
+                            target="_blank"
+                          >
+                            View Route Details →
+                          </a>
+                        )}
+                      </div>
+                    </>
                   )}
-                  
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-600">
-                      📍 {selectedLocation.coordinates.lat.toFixed(4)}, {selectedLocation.coordinates.lng.toFixed(4)}
-                    </p>
-                    {selectedLocation.area?._sys?.filename && (
-                      <a 
-                        href={`/areas/${selectedLocation.area._sys.filename.replace('.mdx', '')}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium block"
-                        target="_blank"
-                      >
-                        View Area Details →
-                      </a>
-                    )}
-                    {selectedLocation.type === 'route' && selectedLocation.routes && selectedLocation.routes[0]?._sys?.filename && (
-                      <a 
-                        href={`/routes/${selectedLocation.routes[0]._sys.filename.replace('.mdx', '')}`}
-                        className="text-purple-600 hover:text-purple-800 text-sm font-medium block"
-                        target="_blank"
-                      >
-                        View Route Details →
-                      </a>
-                    )}
-                  </div>
                 </div>
               </InfoWindow>
             )}
@@ -567,13 +626,33 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                 
                 return (
                   <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                    <h4 className="font-semibold">{routeData.title}</h4>
-                    <div className="text-sm text-gray-600 mt-1">
-                      {routeData.miles && <span>📏 {routeData.miles} mi</span>}
-                      {routeData.gain && <span className="ml-3">⬆️ {routeData.gain}ft</span>}
-                      {routeData.classRating && (
-                        <span className="ml-3">🧗 {routeData.classRating.replace('class', 'Class ')}</span>
-                      )}
+                    <div className="flex gap-3">
+                      {/* Featured image thumbnail */}
+                      <div className="flex-shrink-0">
+                        {routeData.featuredImage ? (
+                          <img 
+                            src={routeData.featuredImage} 
+                            alt={routeData.title || 'Route image'}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <span className="text-gray-400 text-xs">🏔️</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Route content */}
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{routeData.title}</h4>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {routeData.miles && <span>📏 {routeData.miles} mi</span>}
+                          {routeData.gain && <span className="ml-3">⬆️ {routeData.gain}ft</span>}
+                          {routeData.classRating && (
+                            <span className="ml-3">🧗 {routeData.classRating.replace('class', 'Class ')}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
