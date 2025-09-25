@@ -27,7 +27,7 @@ export default async function TripPlansPage() {
 
     return (
       <Layout rawPageData={allTripPlans.data}>
-        <TripPlansClientPage {...allTripPlans} />
+        <TripPlansClientPage data={allTripPlans.data as any} />
       </Layout>
     );
   } catch (error) {

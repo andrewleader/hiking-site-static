@@ -16,7 +16,29 @@ export default function TripReportsClientPage({ data }: TripReportsClientPagePro
   
   const tripReports = data.tripReportConnection.edges || [];
   
-  const filteredTripReports = tripReports.filter((report) => {
+  // Sort by start date descending (most recent first), with null dates at the end
+  const sortedTripReports = [...tripReports].sort((a, b) => {
+    const aDate = a?.node?.startDate;
+    const bDate = b?.node?.startDate;
+    
+    // If both have no date, maintain original order
+    if (!aDate && !bDate) return 0;
+    
+    // If only a has no date, put it at the end
+    if (!aDate && bDate) return 1;
+    
+    // If only b has no date, put it at the end
+    if (aDate && !bDate) return -1;
+    
+    // If both have dates, sort by date descending
+    if (aDate && bDate) {
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    }
+    
+    return 0;
+  });
+  
+  const filteredTripReports = sortedTripReports.filter((report) => {
     if (!report?.node) return false;
     const title = report.node.title?.toLowerCase() || '';
     return title.includes(searchTerm.toLowerCase());

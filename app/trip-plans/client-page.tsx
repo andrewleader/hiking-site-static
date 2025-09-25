@@ -16,7 +16,29 @@ export default function TripPlansClientPage({ data }: TripPlansClientPageProps) 
   
   const tripPlans = data.tripPlanConnection.edges || [];
   
-  const filteredTripPlans = tripPlans.filter((plan) => {
+  // Sort by start date descending (most recent first), with null dates at the end
+  const sortedTripPlans = [...tripPlans].sort((a, b) => {
+    const aDate = a?.node?.startDate;
+    const bDate = b?.node?.startDate;
+    
+    // If both have no date, maintain original order
+    if (!aDate && !bDate) return 0;
+    
+    // If only a has no date, put it at the end
+    if (!aDate && bDate) return 1;
+    
+    // If only b has no date, put it at the end
+    if (aDate && !bDate) return -1;
+    
+    // If both have dates, sort by date descending
+    if (aDate && bDate) {
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    }
+    
+    return 0;
+  });
+  
+  const filteredTripPlans = sortedTripPlans.filter((plan) => {
     if (!plan?.node) return false;
     const title = plan.node.title?.toLowerCase() || '';
     return title.includes(searchTerm.toLowerCase());

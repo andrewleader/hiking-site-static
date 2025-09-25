@@ -23,11 +23,9 @@ export default async function TripReportsPage() {
       );
     }
 
-    // Removed the pagination loop since we're getting all at once
-
     return (
       <Layout rawPageData={allTripReports.data}>
-        <TripReportsClientPage {...allTripReports} />
+        <TripReportsClientPage data={allTripReports.data as any} />
       </Layout>
     );
   } catch (error) {

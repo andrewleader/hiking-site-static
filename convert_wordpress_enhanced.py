@@ -6,6 +6,24 @@ import html
 import json
 from pathlib import Path
 import os
+from datetime import datetime
+
+def format_date_for_tinacms(date_string):
+    """Convert YYYYMMDD format to ISO 8601 format for TinaCMS"""
+    if not date_string or len(date_string) != 8:
+        return ""
+    
+    try:
+        # Parse YYYYMMDD format
+        year = int(date_string[:4])
+        month = int(date_string[4:6])
+        day = int(date_string[6:8])
+        
+        # Create datetime object and format as ISO 8601
+        date_obj = datetime(year, month, day)
+        return date_obj.strftime('%Y-%m-%dT00:00:00.000Z')
+    except (ValueError, TypeError):
+        return ""
 
 def unserialize_php(data):
     """Simple PHP unserialization for basic array structures"""
@@ -154,9 +172,9 @@ def extract_relationships_and_images(item, namespaces):
             elif key == 'parent_area':
                 custom_fields['parentAreaId'] = value if value and value.strip() else None
             elif key == 'start_date':
-                custom_fields['startDate'] = value if value and value.strip() else None
+                custom_fields['startDate'] = format_date_for_tinacms(value) if value and value.strip() else ""
             elif key == 'end_date':
-                custom_fields['endDate'] = value if value and value.strip() else None
+                custom_fields['endDate'] = format_date_for_tinacms(value) if value and value.strip() else ""
     
     # Extract content and process images/betacreator
     content_elem = item.find('content:encoded', namespaces)
