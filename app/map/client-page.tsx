@@ -120,16 +120,42 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
     setSelectedArea(location.area || null);
   }, []);
 
-  const getMarkerIcon = (type: LocationData['type']) => {
+  const getHighestDifficulty = (routes: Route[]) => {
+    if (!routes || routes.length === 0) return 'none';
+    
+    const difficulties = routes.map(route => route.classRating).filter(Boolean);
+    
+    if (difficulties.includes('class5')) return 'class5';
+    if (difficulties.includes('class4')) return 'class4';
+    if (difficulties.includes('class3')) return 'class3';
+    if (difficulties.includes('class2')) return 'class2';
+    return 'none';
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'class5': return '#dc2626'; // Red
+      case 'class4': return '#ea580c'; // Orange
+      case 'class3': return '#f59e0b'; // Yellow-orange
+      case 'class2': 
+      case 'none':
+      default: return '#16a34a'; // Green
+    }
+  };
+
+  const getMarkerIcon = (location: LocationData) => {
     // Check if Google Maps API is loaded
     if (!isGoogleMapsLoaded || typeof window === 'undefined' || !window.google || !window.google.maps) {
       return undefined;
     }
 
-    if (type === 'area') {
+    if (location.type === 'area') {
+      const highestDifficulty = getHighestDifficulty(location.routes || []);
+      const color = getDifficultyColor(highestDifficulty);
+      
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
-        fillColor: '#2563eb',
+        fillColor: color,
         fillOpacity: 0.8,
         strokeColor: '#ffffff',
         strokeWeight: 2,
@@ -249,10 +275,25 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
           Explore climbing areas and routes on an interactive map. Click markers for details.
         </p>
         
-        <div className="flex gap-4 text-sm mb-4">
+        <div className="flex flex-wrap gap-4 text-sm mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
-            <span>Climbing Areas ({mapLocations.length})</span>
+            <div className="w-4 h-4 bg-red-600 rounded-full"></div>
+            <span>Class 5 Areas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-600 rounded-full"></div>
+            <span>Class 4 Areas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+            <span>Class 3 Areas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-600 rounded-full"></div>
+            <span>Class 2/No Routes</span>
+          </div>
+          <div className="text-gray-600">
+            ({mapLocations.length} total areas)
           </div>
         </div>
       </div>
@@ -274,7 +315,7 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
               <Marker
                 key={location.id}
                 position={location.coordinates}
-                icon={getMarkerIcon(location.type)}
+                icon={getMarkerIcon(location)}
                 onClick={() => handleMarkerClick(location)}
               />
             ))}
@@ -302,6 +343,11 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                     {selectedLocation.routeCount !== undefined && (
                       <span className="ml-2 text-sm text-gray-600">
                         {selectedLocation.routeCount} route{selectedLocation.routeCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {selectedLocation.routes && selectedLocation.routes.length > 0 && (
+                      <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                        Max: {getHighestDifficulty(selectedLocation.routes).replace('class', 'Class ') || 'Unspecified'}
                       </span>
                     )}
                   </div>
