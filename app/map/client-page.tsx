@@ -638,7 +638,13 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                 const routeData = route.node as Route;
                 
                 return (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <a
+                    key={index}
+                    href={routeData._sys?.filename ? `/routes/${routeData._sys.filename.replace('.mdx', '')}` : '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex gap-3">
                       {/* Featured image thumbnail */}
                       <div className="flex-shrink-0">
@@ -671,7 +677,7 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </a>
                 );
               })}
               
