@@ -108,7 +108,7 @@ export default function RoutesClientPage({ data }: RoutesClientPageProps) {
                     <p>🏔️ {routeData.highestElevation.toLocaleString()}ft max</p>
                   )}
                   {routeData.classRating && (
-                    <p className="font-medium text-orange-600">
+                    <p className="font-medium text-orange-500">
                       🧗 {formatDifficulty(routeData)}
                     </p>
                   )}

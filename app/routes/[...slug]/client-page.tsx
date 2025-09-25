@@ -66,7 +66,7 @@ export default function RouteClientPage({ data, variables, query }: RouteClientP
           )}
           {route.classRating && (
             <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{formatDifficulty()}</div>
+              <div className="text-2xl font-bold text-orange-500">{formatDifficulty()}</div>
               <div className="text-sm text-gray-600">Difficulty</div>
             </div>
           )}
@@ -140,7 +140,7 @@ export default function RouteClientPage({ data, variables, query }: RouteClientP
               href={route.mountainForecastUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-700 transition-colors"
             >
               🌤️ Weather Forecast
             </a>

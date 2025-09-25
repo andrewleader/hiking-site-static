@@ -147,7 +147,7 @@ def extract_relationships_and_images(item, namespaces):
             elif key == 'mountain_forecast':
                 custom_fields['mountainForecastUrl'] = value if value and value.strip() else None
             elif key == 'summit':
-                # Handle PHP serialized array for coordinates
+                # Handle PHP serialized array for coordinates (works for both areas and routes)
                 coords = extract_coordinates_from_php_array(value)
                 if coords:
                     custom_fields['summitCoords'] = coords
@@ -748,6 +748,7 @@ def process_wordpress_xml_enhanced():
                 'ydsSubRating': custom_fields.get('ydsSubRating', ''),
                 'pitches': custom_fields.get('pitches'),
                 'parentArea': parent_area_slug,  # Now properly mapped!
+                'summitCoords': custom_fields.get('summitCoords', ''),
                 'calTopoUrl': custom_fields.get('calTopoUrl', ''),
                 'gpxFile': custom_fields.get('gpxFile', ''),
                 'mountainForecastUrl': custom_fields.get('mountainForecastUrl', ''),

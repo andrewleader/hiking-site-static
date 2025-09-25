@@ -112,6 +112,35 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
       });
     });
 
+    // Add routes with coordinates (that aren't already covered by their area)
+    routes.forEach((route, index) => {
+      if (!route?.node) return;
+      
+      const routeData = route.node as Route;
+      const routeCoords = parseCoordinates(routeData.summitCoords);
+      if (!routeCoords) return;
+
+      // Check if this route's area already has coordinates on the map
+      const hasAreaOnMap = mappableAreas.some(area => {
+        if (!area?.node) return false;
+        const areaData = area.node as Area;
+        return routeData.parentArea === areaData || 
+               (typeof routeData.parentArea === 'object' && 
+                routeData.parentArea?._sys?.filename === areaData._sys?.filename);
+      });
+
+      // Only add routes whose areas don't have coordinates (or standalone routes)
+      if (!hasAreaOnMap) {
+        locations.push({
+          id: `route-${index}`,
+          title: routeData.title || 'Unnamed Route',
+          type: 'route',
+          coordinates: routeCoords,
+          routes: [routeData]
+        });
+      }
+    });
+
     setMapLocations(locations);
   }, [areas, routes]);
 
@@ -149,10 +178,20 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
       return undefined;
     }
 
+    const highestDifficulty = getHighestDifficulty(location.routes || []);
+    const color = getDifficultyColor(highestDifficulty);
+
     if (location.type === 'area') {
-      const highestDifficulty = getHighestDifficulty(location.routes || []);
-      const color = getDifficultyColor(highestDifficulty);
-      
+      return {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        fillColor: color,
+        fillOpacity: 0.8,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+        scale: 10
+      };
+    } else if (location.type === 'route') {
+      // Use the same circle marker for individual routes
       return {
         path: window.google.maps.SymbolPath.CIRCLE,
         fillColor: color,
@@ -188,10 +227,10 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
           </p>
         </div>
 
-        {/* Fallback: Show areas list */}
+        {/* Fallback: Show locations list */}
         <div className="grid md:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-2xl font-bold mb-4">Areas with Coordinates</h2>
+            <h2 className="text-2xl font-bold mb-4">Mappable Locations</h2>
             <div className="space-y-4">
               {mappableAreas.map((area, index) => {
                 if (!area?.node) return null;
@@ -210,7 +249,12 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                     }`}
                     onClick={() => setSelectedArea(selectedArea === areaData ? null : areaData)}
                   >
-                    <h3 className="font-semibold text-lg">{areaData.title}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        area
+                      </span>
+                      <h3 className="font-semibold text-lg">{areaData.title}</h3>
+                    </div>
                     {coords && (
                       <p className="text-sm text-gray-600">
                         📍 {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
@@ -222,10 +266,60 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                   </div>
                 );
               })}
+              
+              {/* Show routes with coordinates that don't have area coordinates */}
+              {routes.filter(route => {
+                if (!route?.node) return false;
+                const routeData = route.node as Route;
+                const routeCoords = parseCoordinates(routeData.summitCoords);
+                if (!routeCoords) return false;
+                
+                const hasAreaOnMap = mappableAreas.some(area => {
+                  if (!area?.node) return false;
+                  const areaData = area.node as Area;
+                  return routeData.parentArea === areaData || 
+                         (typeof routeData.parentArea === 'object' && 
+                          routeData.parentArea?._sys?.filename === areaData._sys?.filename);
+                });
+                
+                return !hasAreaOnMap;
+              }).map((route, index) => {
+                if (!route?.node) return null;
+                
+                const routeData = route.node as Route;
+                const coords = parseCoordinates(routeData.summitCoords);
+                
+                return (
+                  <div
+                    key={`route-${index}`}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-gray-300"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                        route
+                      </span>
+                      <h3 className="font-semibold text-lg">{routeData.title}</h3>
+                    </div>
+                    {coords && (
+                      <p className="text-sm text-gray-600">
+                        📍 {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+                      </p>
+                    )}
+                    <div className="text-sm text-gray-600 mt-1">
+                      {routeData.classRating && (
+                        <span>🧗 {routeData.classRating.replace('class', 'Class ')}</span>
+                      )}
+                      {routeData.miles && (
+                        <span className="ml-2">📏 {routeData.miles}mi</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             
             {mappableAreas.length === 0 && (
-              <p className="text-gray-500">No areas with coordinates found.</p>
+              <p className="text-gray-500">No locations with coordinates found.</p>
             )}
           </div>
 
@@ -276,24 +370,26 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
         </p>
         
         <div className="flex flex-wrap gap-4 text-sm mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-600 rounded-full"></div>
-            <span>Class 5 Areas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-600 rounded-full"></div>
-            <span>Class 4 Areas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-            <span>Class 3 Areas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-600 rounded-full"></div>
-            <span>Class 2/No Routes</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-600 rounded-full"></div>
+              <span>Class 5</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+              <span>Class 4</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
+              <span>Class 3</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-600 rounded-full"></div>
+              <span>Class 2/None</span>
+            </div>
           </div>
           <div className="text-gray-600">
-            ({mapLocations.length} total areas)
+            ({mapLocations.filter(l => l.type === 'area').length} areas, {mapLocations.filter(l => l.type === 'route').length} routes)
           </div>
         </div>
       </div>
@@ -337,20 +433,43 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                 <div className="max-w-sm">
                   <h3 className="font-bold text-lg mb-2">{selectedLocation.title}</h3>
                   <div className="mb-3">
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      selectedLocation.type === 'area' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-purple-100 text-purple-800'
+                    }`}>
                       {selectedLocation.type}
                     </span>
-                    {selectedLocation.routeCount !== undefined && (
+                    {selectedLocation.type === 'area' && selectedLocation.routeCount !== undefined && (
                       <span className="ml-2 text-sm text-gray-600">
                         {selectedLocation.routeCount} route{selectedLocation.routeCount !== 1 ? 's' : ''}
                       </span>
                     )}
                     {selectedLocation.routes && selectedLocation.routes.length > 0 && (
                       <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                        Max: {getHighestDifficulty(selectedLocation.routes).replace('class', 'Class ') || 'Unspecified'}
+                        {selectedLocation.type === 'route' 
+                          ? selectedLocation.routes[0].classRating?.replace('class', 'Class ') || 'Unspecified'
+                          : `Max: ${getHighestDifficulty(selectedLocation.routes).replace('class', 'Class ') || 'Unspecified'}`
+                        }
                       </span>
                     )}
                   </div>
+                  
+                  {/* Route-specific details */}
+                  {selectedLocation.type === 'route' && selectedLocation.routes && selectedLocation.routes[0] && (
+                    <div className="mb-3 text-sm text-gray-600">
+                      {selectedLocation.routes[0].miles && (
+                        <div>📏 {selectedLocation.routes[0].miles} miles</div>
+                      )}
+                      {selectedLocation.routes[0].gain && (
+                        <div>⬆️ {selectedLocation.routes[0].gain}ft gain</div>
+                      )}
+                      {selectedLocation.routes[0].highestElevation && (
+                        <div>🏔️ {selectedLocation.routes[0].highestElevation}ft elevation</div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="space-y-1">
                     <p className="text-xs text-gray-600">
                       📍 {selectedLocation.coordinates.lat.toFixed(4)}, {selectedLocation.coordinates.lng.toFixed(4)}
@@ -364,6 +483,15 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
                         View Area Details →
                       </a>
                     )}
+                    {selectedLocation.type === 'route' && selectedLocation.routes && selectedLocation.routes[0]?._sys?.filename && (
+                      <a 
+                        href={`/routes/${selectedLocation.routes[0]._sys.filename.replace('.mdx', '')}`}
+                        className="text-purple-600 hover:text-purple-800 text-sm font-medium block"
+                        target="_blank"
+                      >
+                        View Route Details →
+                      </a>
+                    )}
                   </div>
                 </div>
               </InfoWindow>
@@ -372,44 +500,55 @@ export default function MapClientPage({ areasData, routesData }: MapClientPagePr
         </LoadScript>
       </div>
 
-      {/* Areas List */}
+      {/* Locations List */}
       <div className="grid md:grid-cols-2 gap-8">
         <div>
-          <h2 className="text-2xl font-bold mb-4">Areas with Coordinates</h2>
-          <div className="space-y-4">
-            {mappableAreas.map((area, index) => {
-              if (!area?.node) return null;
-              
-              const areaData = area.node as Area;
-              const coords = parseCoordinates(areaData.summitCoords);
-              const areaRoutes = getRoutesForArea(areaData);
-              
-              return (
-                <div
-                  key={index}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                    selectedArea === areaData 
-                      ? 'border-green-500 bg-green-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setSelectedArea(selectedArea === areaData ? null : areaData)}
-                >
-                  <h3 className="font-semibold text-lg">{areaData.title}</h3>
-                  {coords && (
-                    <p className="text-sm text-gray-600">
-                      📍 {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-                    </p>
-                  )}
-                  <p className="text-sm text-blue-600">
-                    {areaRoutes.length} route{areaRoutes.length !== 1 ? 's' : ''}
-                  </p>
+          <h2 className="text-2xl font-bold mb-4">Mappable Locations</h2>
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {mapLocations.map((location) => (
+              <div
+                key={location.id}
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                  selectedLocation === location 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setSelectedLocation(selectedLocation === location ? null : location)}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    location.type === 'area' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {location.type}
+                  </span>
+                  <h3 className="font-semibold text-lg">{location.title}</h3>
                 </div>
-              );
-            })}
+                <p className="text-sm text-gray-600">
+                  📍 {location.coordinates.lat.toFixed(4)}, {location.coordinates.lng.toFixed(4)}
+                </p>
+                {location.type === 'area' && (
+                  <p className="text-sm text-blue-600">
+                    {location.routeCount} route{location.routeCount !== 1 ? 's' : ''}
+                  </p>
+                )}
+                {location.type === 'route' && location.routes && location.routes[0] && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    {location.routes[0].classRating && (
+                      <span>🧗 {location.routes[0].classRating.replace('class', 'Class ')}</span>
+                    )}
+                    {location.routes[0].miles && (
+                      <span className="ml-2">📏 {location.routes[0].miles}mi</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
           
-          {mappableAreas.length === 0 && (
-            <p className="text-gray-500">No areas with coordinates found.</p>
+          {mapLocations.length === 0 && (
+            <p className="text-gray-500">No locations with coordinates found.</p>
           )}
         </div>
 

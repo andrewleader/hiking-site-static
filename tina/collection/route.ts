@@ -116,6 +116,12 @@ const Route: Collection = {
     },
     {
       type: 'string',
+      label: 'Summit Coordinates',
+      name: 'summitCoords',
+      description: 'Latitude, longitude coordinates for route summit (e.g. "47.447334, -120.992787")',
+    },
+    {
+      type: 'string',
       label: 'CalTopo URL',
       name: 'calTopoUrl',
       description: 'Link to CalTopo map',
