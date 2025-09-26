@@ -1,0 +1,57 @@
+/* COLOR PICKER
+============================================================================= */
+.simple-color-picker {
+	@swatchWidth: 12px;
+
+	.preview-swatch {
+		height: 23px;
+		width: 27px;
+		float: left;
+		border: #000 solid 1px;
+
+		// &.transparent {
+		// 	background-image: url(/assets/images/sheet/trans_12.png);
+		// }
+	}
+
+	.input-container {
+		width: 56px;
+		position: relative;
+		margin-left: 10px;
+		float: left;
+
+		input {
+			height: 25px;
+			width: 100%;
+			display: block;
+		}
+	}
+
+	.swatch-container {
+		border: #000 solid 1px;
+		border-width: 0 1px 1px 0;
+		width: (@swatchWidth + 1)*12;
+	}
+
+    .swatch {
+		height: 12px;
+		width: 12px;
+		float: left; 
+		border: #000 solid 1px;
+		border-width: 1px 0 0 1px;
+
+		// &.transparent {
+		// 	background-image: url(/assets/images/sheet/trans_12.png);
+		// }
+
+		&.selected {
+			position: relative;
+			border: #FFF solid 2px;
+			margin: -1px -2px -2px -1px;
+		}
+	}
+
+	.button-container {
+		float: right;
+	}
+}

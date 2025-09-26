@@ -1,0 +1,40 @@
+@calloutPointerHeight: 8px;
+
+.callout {
+	position: absolute;
+	z-index: 10000;
+	width: 0;
+}
+
+.callout-bubble { 
+	padding: 10px;
+	border: 1px solid #999;
+	background-color: #FFF;
+	position: relative;
+	top: @calloutPointerHeight;
+	left: -89px;
+	width: 158px;
+
+	.border-radius(4px);
+	.box-shadow(0px, 8px, 16px, 0px, rgba(0, 0, 0, .3));
+}
+
+.callout-pointer-border, .callout-pointer {
+	position: absolute;
+	height: 0;
+	width: 0;
+	border: transparent solid @calloutPointerHeight;
+	border-top: none;
+	font-size: 0;
+	line-height: 0;
+	top: 0;
+	left: -@calloutPointerHeight;
+}
+
+.callout-pointer-border {
+	border-bottom-color: #999;
+}
+.callout-pointer { 
+	border-bottom-color: #FFF;
+	top: 1px;
+}

@@ -3,13 +3,14 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "tinacms dev -c \"next dev --turbopack\"",
-    "build": "tinacms build && next build",
-    "build-local": "tinacms build --local --skip-indexing --skip-cloud-checks && next build",
-    "start": "tinacms build && next start",
+    "dev": "npm run build:betacreator && tinacms dev -c \"next dev --turbopack\"",
+    "build": "npm run build:betacreator && tinacms build && next build",
+    "build-local": "npm run build:betacreator && tinacms build --local --skip-indexing --skip-cloud-checks && next build",
+    "start": "npm run build:betacreator && tinacms build && next start",
     "export": "npm run build && next export",
     "lint": "biome lint",
-    "dev:build": "next build"
+    "dev:build": "npm run build:betacreator && next build",
+    "build:betacreator": "cd betacreator && npm run bundle:betacreator"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
