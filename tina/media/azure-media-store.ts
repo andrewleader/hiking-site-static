@@ -4,10 +4,10 @@ export class AzureMediaStore implements MediaStore {
   accept = "image/*";
 
   private getUploadUrl(): string {
-    const baseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTION_BASE_URL || "https://trilliumimagestorage-eqcpb7erggfpavem.westus-01.azurewebsites.net";
-    const code = process.env.AZURE_UPLOAD_FUNCTION_CODE;
+    const baseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTION_BASE_URL || "https://hikingimagestorage-cafpa4h7abfwhhar.westus-01.azurewebsites.net";
+    const code = process.env.NEXT_PUBLIC_AZURE_UPLOAD_FUNCTION_CODE;
     if (!code) {
-      throw new Error("AZURE_UPLOAD_FUNCTION_CODE environment variable is required");
+      throw new Error("NEXT_PUBLIC_AZURE_UPLOAD_FUNCTION_CODE environment variable is required");
     }
     return `${baseUrl}/api/uploadimage?code=${code}`;
   }
@@ -58,15 +58,15 @@ export class AzureMediaStore implements MediaStore {
   }
 
   toFullUrl = (src: string): string => {
-    const storageUrl = process.env.NEXT_PUBLIC_AZURE_BLOB_BASE_URL || "https://trilliumimagestorage.blob.core.windows.net";
+    const storageUrl = process.env.NEXT_PUBLIC_AZURE_BLOB_BASE_URL || "https://hikingimagestorage.blob.core.windows.net";
     return `${storageUrl}/images/${src}`;
   }
 
   private getListUrl(): string {
-    const baseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTION_BASE_URL || "https://trilliumimagestorage-eqcpb7erggfpavem.westus-01.azurewebsites.net";
-    const code = process.env.AZURE_LIST_FUNCTION_CODE;
+    const baseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTION_BASE_URL || "https://hikingimagestorage-cafpa4h7abfwhhar.westus-01.azurewebsites.net";
+    const code = process.env.NEXT_PUBLIC_AZURE_LIST_FUNCTION_CODE;
     if (!code) {
-      throw new Error("AZURE_LIST_FUNCTION_CODE environment variable is required");
+      throw new Error("NEXT_PUBLIC_AZURE_LIST_FUNCTION_CODE environment variable is required");
     }
     return `${baseUrl}/api/listimages?code=${code}`;
   }
@@ -97,10 +97,10 @@ export class AzureMediaStore implements MediaStore {
   }
 
   private getDeleteUrl(): string {
-    const baseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTION_BASE_URL || "https://trilliumimagestorage-eqcpb7erggfpavem.westus-01.azurewebsites.net";
-    const code = process.env.AZURE_DELETE_FUNCTION_CODE;
+    const baseUrl = process.env.NEXT_PUBLIC_AZURE_FUNCTION_BASE_URL || "https://hikingimagestorage-cafpa4h7abfwhhar.westus-01.azurewebsites.net";
+    const code = process.env.NEXT_PUBLIC_AZURE_DELETE_FUNCTION_CODE;
     if (!code) {
-      throw new Error("AZURE_DELETE_FUNCTION_CODE environment variable is required");
+      throw new Error("NEXT_PUBLIC_AZURE_DELETE_FUNCTION_CODE environment variable is required");
     }
     return `${baseUrl}/api/deleteimage?code=${code}`;
   }
