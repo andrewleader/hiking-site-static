@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRouteDifficultyText } from './route-difficulty';
+import { client } from '../tina/__generated__/client';
 
 interface SearchResult {
   id: string;
@@ -77,85 +78,83 @@ export default function UniversalSearch({ className = '' }: UniversalSearchProps
     setIsOpen(true);
 
     try {
-      // Fetch all content types
-      const [areasRes, routesRes, plansRes, reportsRes] = await Promise.all([
-        fetch('/api/search/areas'),
-        fetch('/api/search/routes'),
-        fetch('/api/search/trip-plans'),
-        fetch('/api/search/trip-reports'),
+      // Fetch all content types using Tina client
+      const [areasResponse, routesResponse, plansResponse, reportsResponse] = await Promise.all([
+        client.queries.areaConnection(),
+        client.queries.routeConnection(),
+        client.queries.tripPlanConnection(),
+        client.queries.tripReportConnection(),
       ]);
 
-      const [areas, routes, plans, reports] = await Promise.all([
-        areasRes.json(),
-        routesRes.json(),
-        plansRes.json(),
-        reportsRes.json(),
-      ]);
+      const areas = areasResponse.data.areaConnection.edges?.map(edge => edge?.node) || [];
+      const routes = routesResponse.data.routeConnection.edges?.map(edge => edge?.node) || [];
+      const plans = plansResponse.data.tripPlanConnection.edges?.map(edge => edge?.node) || [];
+      const reports = reportsResponse.data.tripReportConnection.edges?.map(edge => edge?.node) || [];
 
       // Filter results based on query
       const searchLower = searchQuery.toLowerCase();
       const allResults: SearchResult[] = [];
 
       // Search areas
-      areas.forEach((area: any) => {
-        if (area.title?.toLowerCase().includes(searchLower)) {
+      areas.forEach((area) => {
+        if (area && area.title?.toLowerCase().includes(searchLower)) {
           allResults.push({
             id: area.id,
             title: area.title,
             type: 'area',
-            slug: area.slug,
-            featuredImage: area.featuredImage,
-            excerpt: area.excerpt || ''
+            slug: area._sys.basename,
+            featuredImage: area.featuredImage || undefined,
+            excerpt: ''
           });
         }
       });
 
       // Search routes
-      routes.forEach((route: any) => {
-        if (route.title?.toLowerCase().includes(searchLower) || 
-            route.parentArea?.toLowerCase().includes(searchLower)) {
+      routes.forEach((route) => {
+        if (route && (route.title?.toLowerCase().includes(searchLower) || 
+            route.parentArea?.title?.toLowerCase().includes(searchLower))) {
           allResults.push({
             id: route.id,
             title: route.title,
             type: 'route',
-            slug: route.slug,
-            featuredImage: route.featuredImage,
-            classRating: route.classRating,
-            ydsRating: route.ydsRating,
-            ydsSubRating: route.ydsSubRating,
-            miles: route.miles,
-            gain: route.gain,
-            parentArea: route.parentArea
+            slug: route._sys.basename,
+            featuredImage: route.featuredImage || undefined,
+            classRating: route.classRating || undefined,
+            ydsRating: route.ydsRating || undefined,
+            ydsSubRating: route.ydsSubRating || undefined,
+            miles: route.miles || undefined,
+            gain: route.gain || undefined,
+            parentArea: route.parentArea?.title || undefined
           });
         }
       });
 
       // Search trip plans
-      plans.forEach((plan: any) => {
-        if (plan.title?.toLowerCase().includes(searchLower)) {
+      plans.forEach((plan) => {
+        if (plan && plan.title?.toLowerCase().includes(searchLower)) {
           allResults.push({
             id: plan.id,
             title: plan.title,
             type: 'trip-plan',
-            slug: plan.slug,
-            featuredImage: plan.featuredImage,
-            startDate: plan.startDate,
-            endDate: plan.endDate
+            slug: plan._sys.basename,
+            featuredImage: plan.featuredImage || undefined,
+            startDate: plan.startDate || undefined,
+            endDate: plan.endDate || undefined
           });
         }
       });
 
       // Search trip reports
-      reports.forEach((report: any) => {
-        if (report.title?.toLowerCase().includes(searchLower)) {
+      reports.forEach((report) => {
+        if (report && report.title?.toLowerCase().includes(searchLower)) {
           allResults.push({
             id: report.id,
             title: report.title,
             type: 'trip-report',
-            slug: report.slug,
-            featuredImage: report.featuredImage,
-            startDate: report.startDate,
-            endDate: report.endDate
+            slug: report._sys.basename,
+            featuredImage: report.featuredImage || undefined,
+            startDate: report.startDate || undefined,
+            endDate: report.endDate || undefined
           });
         }
       });
