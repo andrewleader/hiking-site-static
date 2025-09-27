@@ -1,14 +1,12 @@
 'use client';
 
-import { Area, AreaConnection } from '@/tina/__generated__/types';
+import { Area, AreaConnectionQuery } from '@/tina/__generated__/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 
 interface AreasClientPageProps {
-  data: {
-    areaConnection: AreaConnection;
-  };
+  data: AreaConnectionQuery;
 }
 
 export default function AreasClientPage({ data }: AreasClientPageProps) {
@@ -16,7 +14,7 @@ export default function AreasClientPage({ data }: AreasClientPageProps) {
   
   const areas = data.areaConnection.edges || [];
   
-  const filteredAreas = areas.filter((area) => {
+  const filteredAreas = areas.filter((area: any) => {
     if (!area?.node) return false;
     const title = area.node.title?.toLowerCase() || '';
     return title.includes(searchTerm.toLowerCase());
@@ -39,7 +37,7 @@ export default function AreasClientPage({ data }: AreasClientPageProps) {
 
       {/* Areas Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredAreas.map((area, index) => {
+        {filteredAreas.map((area: any, index: number) => {
           if (!area?.node) return null;
           
           const areaData = area.node as Area;

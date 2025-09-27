@@ -31,7 +31,8 @@
     "strictNullChecks": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "betacreator"
   ],
   "include": [
     "next-env.d.ts",

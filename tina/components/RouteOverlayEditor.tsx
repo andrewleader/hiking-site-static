@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Field, wrapFieldsWithMeta } from 'tinacms';
-import BetaCreator, { type BetaCreatorRef } from '../../components/BetaCreator';
+import BetaCreator, { type BetaCreatorRef } from '../../betacreator/src/components/BetaCreator';
 
 // CSS for the modal
 const modalStyles = `

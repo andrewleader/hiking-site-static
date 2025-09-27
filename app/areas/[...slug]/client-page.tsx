@@ -1,6 +1,6 @@
 'use client';
 
-import { AreaQuery, Area, RouteConnection, Route } from '@/tina/__generated__/types';
+import { AreaQuery, Area, RouteConnectionQuery, Route } from '@/tina/__generated__/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { TinaMarkdown } from 'tinacms/dist/rich-text';
@@ -13,9 +13,7 @@ interface AreaClientPageProps {
     relativePath: string;
   };
   query: string;
-  routesData: {
-    routeConnection: RouteConnection;
-  };
+  routesData: RouteConnectionQuery;
 }
 
 export default function AreaClientPage({ data, variables, query, routesData }: AreaClientPageProps) {
@@ -34,7 +32,7 @@ export default function AreaClientPage({ data, variables, query, routesData }: A
   const coords = parseCoordinates(area.summitCoords);
 
   // Get routes that belong to this area
-  const areaRoutes = routes.filter(route => {
+  const areaRoutes = routes.filter((route: any) => {
     if (!route?.node) return false;
     const routeData = route.node as Route;
     
@@ -113,7 +111,7 @@ export default function AreaClientPage({ data, variables, query, routesData }: A
         
         {areaRoutes.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {areaRoutes.map((route, index) => {
+            {areaRoutes.map((route: any, index: number) => {
               if (!route?.node) return null;
               const routeData = route.node as Route;
               

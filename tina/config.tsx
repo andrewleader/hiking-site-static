@@ -32,6 +32,11 @@ const config = defineConfig({
   schema: {
     collections: [Page, Post, Author, Tag, Area, Route, TripPlan, TripReport, Global],
   },
+  search: {
+    tina: {
+      indexerToken: process.env.TINA_SEARCH_TOKEN!
+    }
+  }
 });
 
 export default config;

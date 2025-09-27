@@ -30,13 +30,5 @@ export interface BetaCreatorData {
   items: BetaCreatorItemData[];
 }
 
-// Global window extension
-declare global {
-  interface Window {
-    BetaCreator: (
-      element: HTMLImageElement,
-      callback: BetaCreatorReadyCallback,
-      options?: BetaCreatorOptions
-    ) => void;
-  }
-}
+// Global window extension - remove this conflicting declaration
+// The BetaCreator types are already declared in betacreator/src/types/betacreator.ts

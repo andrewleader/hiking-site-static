@@ -1,13 +1,11 @@
 'use client';
 
-import { Route, RouteConnection } from '@/tina/__generated__/types';
+import { Route, RouteConnectionQuery } from '@/tina/__generated__/types';
 import { useState } from 'react';
 import { RouteCard } from '@/components/route-card';
 
 interface RoutesClientPageProps {
-  data: {
-    routeConnection: RouteConnection;
-  };
+  data: RouteConnectionQuery;
 }
 
 export default function RoutesClientPage({ data }: RoutesClientPageProps) {
@@ -16,7 +14,7 @@ export default function RoutesClientPage({ data }: RoutesClientPageProps) {
   
   const routes = data.routeConnection.edges || [];
   
-  const filteredRoutes = routes.filter((route) => {
+  const filteredRoutes = routes.filter((route: any) => {
     if (!route?.node) return false;
     const title = route.node.title?.toLowerCase() || '';
     const matchesSearch = title.includes(searchTerm.toLowerCase());
@@ -55,7 +53,7 @@ export default function RoutesClientPage({ data }: RoutesClientPageProps) {
 
       {/* Routes Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredRoutes.map((route, index) => {
+        {filteredRoutes.map((route: any, index: number) => {
           if (!route?.node) return null;
           
           const routeData = route.node as Route;
